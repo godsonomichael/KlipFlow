@@ -151,3 +151,28 @@ export async function syncProviderViews(userId: string, submissionId: string, pl
     return updateProviderSubmissionViews(userId, submissionId, previousViews, message);
   }
 }
+
+export async function checkConnectedAccountsHealth(userId: string) {
+  const platforms = ["youtube", "instagram", "tiktok", "x", "telegram"] as const;
+  return Promise.all(platforms.map(async platform => {
+    const account = await getOAuthAccount(userId, platform);
+    const base = { platform, connected: Boolean(account), handle: account?.handle ?? null, checkedAt: new Date().toISOString() };
+    if (!account) return { ...base, status: "not_connected", message: "Not connected" };
+    if (!account.access_token) return { ...base, status: "manual", message: "Manual connection — no API token" };
+    try {
+      if (platform === "youtube") {
+        const token = await youtubeAccessToken(userId, account);
+        const profile = await jsonRequest("YouTube", "https://www.googleapis.com/youtube/v3/channels?part=id&mine=true", { headers: { Authorization: `Bearer ${token}` } });
+        if (!profile.items?.length) throw new Error("No YouTube channel found");
+      } else if (platform === "instagram") {
+        if (!account.provider_user_id) throw new Error("Instagram profile ID is missing");
+        await instagramRequest(account, `${account.provider_user_id}?fields=id,username`);
+      } else if (platform === "tiktok") {
+        await jsonRequest("TikTok", "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name", { headers: { Authorization: `Bearer ${account.access_token}` } });
+      }
+      return { ...base, status: "healthy", message: "Connection is working" };
+    } catch (error) {
+      return { ...base, status: "needs_attention", message: error instanceof Error ? error.message : "Provider check failed" };
+    }
+  }));
+}

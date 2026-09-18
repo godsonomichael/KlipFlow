@@ -7,6 +7,7 @@ import { getOAuthAccount, saveOAuthAccount } from "./nativeWorkflow";
 
 const YOUTUBE_STATE_COOKIE = "klipflow_youtube_oauth_state";
 const INSTAGRAM_STATE_COOKIE = "klipflow_instagram_oauth_state";
+const TIKTOK_STATE_COOKIE = "klipflow_tiktok_oauth_state";
 const stateMaxAge = 10 * 60 * 1000;
 const graphVersion = process.env.META_GRAPH_VERSION || "v26.0";
 
@@ -144,5 +145,40 @@ export function registerSocialOAuthRoutes(app: Express) {
       await saveOAuthAccount(user.openId, "instagram", { handle, accessToken: pageToken, expiresAt: null, providerUserId: igId, providerAccountName: handle, providerMetadata: { api_host: "https://graph.facebook.com", page_id: String(page.id), page_name: String(page.name || "") } });
       res.redirect(302, "/accounts?oauth=instagram-success");
     } catch (error) { redirectWithError(res, "instagram", error); }
+  });
+
+  app.get("/api/oauth/tiktok/start", async (req, res) => {
+    try {
+      await requireUser(req);
+      const clientKey = env("TIKTOK_CLIENT_KEY") || env("TIKTOK_CLIENT_ID");
+      if (!clientKey) throw new Error("TikTok OAuth is not configured yet.");
+      const state = randomBytes(24).toString("hex");
+      stateCookie(req, res, TIKTOK_STATE_COOKIE, state);
+      const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
+      url.search = new URLSearchParams({ client_key: clientKey, redirect_uri: `${publicBaseUrl(req)}/api/oauth/tiktok/callback`, response_type: "code", scope: "user.info.basic,video.publish,video.upload", state }).toString();
+      res.redirect(302, url.toString());
+    } catch (error) { redirectWithError(res, "tiktok", error); }
+  });
+
+  app.get("/api/oauth/tiktok/callback", async (req, res) => {
+    try {
+      const user = await requireUser(req);
+      const code = typeof req.query.code === "string" ? req.query.code : "";
+      const state = typeof req.query.state === "string" ? req.query.state : "";
+      if (req.query.error) throw new Error(`TikTok authorization was declined: ${String(req.query.error_description || req.query.error)}`);
+      verifyState(req, res, TIKTOK_STATE_COOKIE, state);
+      const clientKey = env("TIKTOK_CLIENT_KEY") || env("TIKTOK_CLIENT_ID");
+      const clientSecret = env("TIKTOK_CLIENT_SECRET");
+      if (!code || !clientKey || !clientSecret) throw new Error("TikTok OAuth callback is missing required configuration.");
+      const token = await fetchJson("TikTok", await fetch("https://open.tiktokapis.com/v2/oauth/token/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_key: clientKey, client_secret: clientSecret, code, grant_type: "authorization_code", redirect_uri: `${publicBaseUrl(req)}/api/oauth/tiktok/callback` }) }));
+      const accessToken = String(token.data?.access_token || "");
+      if (!accessToken) throw new Error("TikTok did not return an access token.");
+      const profile = await fetchJson("TikTok", await fetch("https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url", { headers: { Authorization: `Bearer ${accessToken}` } }));
+      const openId = String(profile.data?.user?.open_id || "");
+      const displayName = String(profile.data?.user?.display_name || "TikTok creator");
+      if (!openId) throw new Error("TikTok did not return a creator profile.");
+      await saveOAuthAccount(user.openId, "tiktok", { handle: displayName, accessToken, refreshToken: String(token.data?.refresh_token || "") || null, expiresAt: token.data?.expires_in ? new Date(Date.now() + Number(token.data.expires_in) * 1000).toISOString() : null, providerUserId: openId, providerAccountName: displayName, providerMetadata: { scopes: token.data?.scope || "" } });
+      res.redirect(302, "/accounts?oauth=tiktok-success");
+    } catch (error) { redirectWithError(res, "tiktok", error); }
   });
 }
