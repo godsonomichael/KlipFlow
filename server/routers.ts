@@ -5,7 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { inspectDriveUrl, isDriveConfigured } from "./integrations/googleDrive";
-import { addConnectedAccount, countUnreadNotifications, createProject, generateClips, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, simulatePost, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/supabaseWorkflow";
+import { addConnectedAccount, countUnreadNotifications, createProject, generateClips, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, simulatePost, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
 import { postClipToProvider, syncProviderViews } from "./integrations/socialProviders";
 
 const platform = z.enum(["tiktok", "instagram", "youtube", "x"]);

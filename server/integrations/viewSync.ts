@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { sdk } from "../_core/sdk";
-import { processProviderViewSync } from "./supabaseWorkflow";
+import { processProviderViewSync } from "./nativeWorkflow";
 
 export async function handleProviderViewSync(req: Request, res: Response) {
   const startedAt = new Date().toISOString();

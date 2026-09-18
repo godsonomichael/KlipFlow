@@ -1,4 +1,4 @@
-import { getOAuthAccount, getClipForProvider, getSubmissionForProvider, notifyClipPosted, saveOAuthAccount, submitClip, updateProviderSubmissionViews } from "./supabaseWorkflow";
+import { getOAuthAccount, getClipForProvider, getSubmissionForProvider, notifyClipPosted, saveOAuthAccount, submitClip, updateProviderSubmissionViews } from "./nativeWorkflow";
 
 type ProviderAccount = NonNullable<Awaited<ReturnType<typeof getOAuthAccount>>>;
 type Clip = Awaited<ReturnType<typeof getClipForProvider>>;

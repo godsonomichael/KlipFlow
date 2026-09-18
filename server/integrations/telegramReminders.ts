@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { sdk } from "../_core/sdk";
-import { processDueTelegramReminders } from "./supabaseWorkflow";
+import { processDueTelegramReminders } from "./nativeWorkflow";
 
 export async function handleTelegramReminders(req: Request, res: Response) {
   const startedAt = new Date().toISOString();

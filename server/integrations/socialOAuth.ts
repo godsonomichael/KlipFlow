@@ -3,7 +3,7 @@ import type { Express, Request, Response as ExpressResponse } from "express";
 import { parse as parseCookie } from "cookie";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { sdk } from "../_core/sdk";
-import { getOAuthAccount, saveOAuthAccount } from "./supabaseWorkflow";
+import { getOAuthAccount, saveOAuthAccount } from "./nativeWorkflow";
 
 const YOUTUBE_STATE_COOKIE = "klipflow_youtube_oauth_state";
 const INSTAGRAM_STATE_COOKIE = "klipflow_instagram_oauth_state";
