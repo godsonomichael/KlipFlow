@@ -289,3 +289,25 @@ export async function processProviderViewSync() {
   }
   return { synced, failed, candidates: candidates.length };
 }
+
+export async function processConnectedAccountHealth() {
+  const users = await query<any>("SELECT DISTINCT user_id FROM connected_accounts LIMIT 1000");
+  const { checkConnectedAccountsHealth } = await import("./socialProviders");
+  let checked = 0;
+  let attention = 0;
+  for (const row of users) {
+    const results = await checkConnectedAccountsHealth(String(row.user_id));
+    for (const result of results) {
+      if (!result.connected || result.status === "manual") continue;
+      checked += 1;
+      if (result.status === "healthy") await execute("UPDATE connected_accounts SET status='active',updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND platform=?", [row.user_id, result.platform]);
+      if (result.status === "needs_attention") {
+        attention += 1;
+        await execute("UPDATE connected_accounts SET status='needs_attention',updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND platform=?", [row.user_id, result.platform]);
+        const recent = await query("SELECT id FROM klipflow_notifications WHERE user_id=? AND type='connection_attention' AND title=? AND created_at>=DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 24 HOUR) LIMIT 1", [row.user_id, `${result.platform} authorization required`]);
+        if (!recent[0]) await createNotification(String(row.user_id), "connection_attention", `${result.platform} authorization required`, result.message || `Reconnect ${result.platform} to keep posting enabled.`, "/accounts");
+      }
+    }
+  }
+  return { users: users.length, checked, attention };
+}

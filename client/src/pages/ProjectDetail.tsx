@@ -58,7 +58,7 @@ export default function ProjectDetail() {
     update.mutate({ clipId, title: draft.title.trim() || "Untitled clip", caption: draft.caption }, { onSuccess: () => {
       const onSuccess = () => { setPosting(null); setPosted(clipId); setToast(true); window.setTimeout(() => setToast(false), 7000); };
       const onError = (error: { message?: string }) => { setPosting(null); setNotice(error.message || "We could not post this clip. Please try again."); };
-      if (platform === "youtube" || platform === "instagram") realPost.mutate({ clipId, platform }, { onSuccess, onError });
+      if (platform === "youtube" || platform === "instagram" || platform === "tiktok") realPost.mutate({ clipId, platform }, { onSuccess, onError });
       else post.mutate({ clipId, platform, handle: account.handle }, { onSuccess, onError });
     }, onError: () => { setPosting(null); setNotice("We could not save the clip text. Please try again."); } });
   };

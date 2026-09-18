@@ -11,6 +11,7 @@ import { registerWorkflowUploadRoutes } from "../integrations/workflowUpload";
 import { handleTelegramReminders } from "../integrations/telegramReminders";
 import { registerSocialOAuthRoutes } from "../integrations/socialOAuth";
 import { handleProviderViewSync } from "../integrations/viewSync";
+import { handleAccountHealth } from "../integrations/accountHealth";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -44,6 +45,7 @@ async function startServer() {
   registerWorkflowUploadRoutes(app);
   app.post("/api/scheduled/telegram-reminders", handleTelegramReminders);
   app.post("/api/scheduled/provider-view-sync", handleProviderViewSync);
+  app.post("/api/scheduled/account-health", handleAccountHealth);
   // tRPC API
   app.use(
     "/api/trpc",

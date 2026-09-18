@@ -1,4 +1,4 @@
-import { HelpCircle, Home, Library, Link2, LogOut, Menu, Moon, PlusCircle, Settings, Sun, Wallet, X } from "lucide-react";
+import { Activity, HelpCircle, Home, Library, Link2, LogOut, Menu, Moon, PlusCircle, Settings, Sun, Wallet, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -7,7 +7,7 @@ import { useTheme } from "../contexts/ThemeContext";
 
 const tabs = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/clips", label: "My Clips", icon: Library },
+  { href: "/dashboard", label: "Dashboard", icon: Activity },
   { href: "/earnings", label: "Earnings", icon: Wallet },
 ];
 
@@ -35,6 +35,7 @@ export default function KlipFlowShell({ children }: { children: React.ReactNode 
     </header>
     {menuOpen && <div className="fixed inset-0 z-50 bg-black/30 md:hidden" onClick={() => setMenuOpen(false)}><div className="ml-auto h-full w-72 bg-white p-5 dark:bg-[#171717]" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-between"><span className="font-bold">Menu</span><button onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={22} /></button></div><div className="mt-8 space-y-2">
       <Link href="/new-project" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10"><PlusCircle size={18} /> Add a video to clip</Link>
+      <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10"><Activity size={18} /> Content Dashboard</Link>
       <Link href="/how-to-use" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10"><HelpCircle size={18} /> How to use KlipFlow</Link>
       <Link href="/accounts" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10"><Link2 size={18} /> Connected Accounts</Link>
       <Link href="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10"><Settings size={18} /> My Settings</Link>

@@ -51,6 +51,20 @@ async function youtubeAccessToken(userId: string, account: ProviderAccount) {
   return accessToken;
 }
 
+async function tiktokAccessToken(userId: string, account: ProviderAccount) {
+  if (!account.access_token) throw new Error("Reconnect TikTok before posting.");
+  const expiresAt = account.token_expires_at ? new Date(account.token_expires_at).getTime() : 0;
+  if (!account.refresh_token || !expiresAt || expiresAt > Date.now() + 60_000) return account.access_token;
+  const clientKey = process.env.TIKTOK_CLIENT_KEY || process.env.TIKTOK_CLIENT_ID;
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  if (!clientKey || !clientSecret) throw new Error("TikTok OAuth is not configured yet.");
+  const body = await jsonRequest("TikTok", "https://open.tiktokapis.com/v2/oauth/token/", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_key: clientKey, client_secret: clientSecret, grant_type: "refresh_token", refresh_token: account.refresh_token }) });
+  const accessToken = String(body.data?.access_token || "");
+  if (!accessToken) throw new Error("TikTok token refresh returned no access token.");
+  await saveOAuthAccount(userId, "tiktok", { handle: account.handle, accessToken, refreshToken: String(body.data?.refresh_token || account.refresh_token), expiresAt: body.data?.expires_in ? new Date(Date.now() + Number(body.data.expires_in) * 1000).toISOString() : null, providerUserId: account.provider_user_id, providerMetadata: account.provider_metadata });
+  return accessToken;
+}
+
 export async function postToYouTube(userId: string, clip: Clip) {
   if (!clip.clip_url) throw new Error("This clip has no video file to post.");
   const account = await getOAuthAccount(userId, "youtube");
@@ -110,9 +124,32 @@ export async function postToInstagram(userId: string, clip: Clip) {
   return { result, providerPostId, postUrl };
 }
 
-export async function postClipToProvider(userId: string, clipId: string, platform: "youtube" | "instagram") {
+export async function postToTikTok(userId: string, clip: Clip) {
+  if (!clip.clip_url) throw new Error("This clip has no video file to post.");
+  if (!/^https?:\/\//i.test(clip.clip_url)) throw new Error("TikTok needs a public HTTPS clip URL. Set PUBLIC_APP_URL and regenerate this clip.");
+  const account = await getOAuthAccount(userId, "tiktok");
+  if (!account) throw new Error("Connect TikTok before posting.");
+  const accessToken = await tiktokAccessToken(userId, account);
+  const init = await jsonRequest("TikTok", "https://open.tiktokapis.com/v2/post/publish/video/init/", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "content-type": "application/json; charset=UTF-8" }, body: JSON.stringify({ post_info: { title: clipCaption(clip), privacy_level: "PUBLIC_TO_EVERYONE", disable_duet: false, disable_comment: false, disable_stitch: false }, source_info: { source: "PULL_FROM_URL", video_url: clip.clip_url } }) });
+  const publishId = String(init.data?.publish_id || "");
+  if (!publishId) throw new Error("TikTok did not return a publish ID. Confirm Content Posting API approval and video.publish scope.");
+  let status = "PROCESSING_UPLOAD";
+  for (let attempt = 0; attempt < 10 && ["PROCESSING_UPLOAD", "PROCESSING_DOWNLOAD", "PUBLISH_IN_PROGRESS"].includes(status); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const current = await jsonRequest("TikTok", "https://open.tiktokapis.com/v2/post/publish/status/fetch/", { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "content-type": "application/json" }, body: JSON.stringify({ publish_id: publishId }) });
+    status = String(current.data?.status || status);
+    if (["FAILED", "SEND_TO_USER_INBOX"].includes(status)) throw new Error(`TikTok publish ended with status ${status}.`);
+  }
+  if (status !== "PUBLISH_COMPLETE") throw new Error("TikTok is still processing this post. Check My Clips again shortly.");
+  const postUrl = `https://www.tiktok.com/@${encodeURIComponent(account.handle.replace(/^@/, ""))}/video/${publishId}`;
+  const result = await submitClip(userId, clip.id, postUrl, "tiktok", publishId);
+  await notifyClipPosted(userId, clip.id, "tiktok");
+  return { result, providerPostId: publishId, postUrl };
+}
+
+export async function postClipToProvider(userId: string, clipId: string, platform: "youtube" | "instagram" | "tiktok") {
   const clip = await getClipForProvider(userId, clipId);
-  return platform === "youtube" ? postToYouTube(userId, clip) : postToInstagram(userId, clip);
+  return platform === "youtube" ? postToYouTube(userId, clip) : platform === "instagram" ? postToInstagram(userId, clip) : postToTikTok(userId, clip);
 }
 
 export async function syncYouTubeViews(userId: string, submissionId: string) {
