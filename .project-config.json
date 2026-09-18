@@ -7,7 +7,9 @@
   ],
   "dev_command": "pnpm run dev",
   "env_vars": {
-    "DATABASE_URL": "mysql://2bRyX5Qorhy4Ww6.root:FDZLDSZ3u28kK04wKA2j@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/g6pMN7FApnJhzqQERtdnRz?ssl={\"rejectUnauthorized\":true}"
+    "DATABASE_URL": "mysql://2bRyX5Qorhy4Ww6.root:FDZLDSZ3u28kK04wKA2j@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/g6pMN7FApnJhzqQERtdnRz?ssl={\"rejectUnauthorized\":true}",
+    "DRIZZLE_DATABASE_URL": "mysql://2bRyX5Qorhy4Ww6.root:FDZLDSZ3u28kK04wKA2j@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/g6pMN7FApnJhzqQERtdnRz?ssl={\"rejectUnauthorized\":true}",
+    "MANUS_WEBDEV_PROJECT_ID": "g6pMN7FApnJhzqQERtdnRz"
   },
   "experiments": [
     "no_db_push"
@@ -24,18 +26,23 @@
   "secrets": {
     "BUILT_IN_FORGE_API_KEY": "b5TfMRwEWihX326pGgbneh",
     "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "INSTAGRAM_APP_ID": "temp_123456",
+    "INSTAGRAM_APP_SECRET": "temp_placeholder_123",
     "JWT_SECRET": "5HR8Je9a6fTzYbtq7SaesE",
     "OAUTH_SERVER_URL": "https://api.manus.im",
     "OWNER_NAME": "VerifyAILabs",
     "OWNER_OPEN_ID": "ZE9X2moH2jbJb8nU7rJL9Q",
+    "TELEGRAM_BOT_TOKEN": "8381753569:AAHOt6vKo95bBX_Gk_dMAIVzLrnLp34k6ck",
     "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
     "VITE_ANALYTICS_WEBSITE_ID": "c2ff4a43-38f7-486c-b7f3-63808457edc3",
     "VITE_APP_ID": "g6pMN7FApnJhzqQERtdnRz",
-    "VITE_APP_LOGO": "",
+    "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663968912377/NuDKiUSLaDzdAqEu.png",
     "VITE_APP_TITLE": "KlipFlow",
     "VITE_FRONTEND_FORGE_API_KEY": "QRWqcwkJ6rA4HWiLpYgDKs",
     "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
-    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im",
+    "YOUTUBE_CLIENT_ID": "133628768216-rcvdpl1d44tnn8nspc1lmjrr1u7ttf8u.apps.googleusercontent.com",
+    "YOUTUBE_CLIENT_SECRET": "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"
   },
   "template_id": "web-db-user",
   "test_command": "pnpm test"
