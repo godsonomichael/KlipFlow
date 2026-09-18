@@ -15,6 +15,8 @@ import NewProject from "./pages/NewProject";
 import NotFound from "./pages/NotFound";
 import ProjectDetail from "./pages/ProjectDetail";
 import Settings from "./pages/Settings";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 
-function Router() { return <KlipFlowShell><Switch><Route path="/" component={Home} /><Route path="/dashboard" component={Dashboard} /><Route path="/new-project" component={NewProject} /><Route path="/project/:id" component={ProjectDetail} /><Route path="/clips" component={Clips} /><Route path="/earnings" component={Earnings} /><Route path="/accounts" component={Accounts} /><Route path="/settings" component={Settings} /><Route path="/how-to-use" component={HowToUse} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch><Onboarding /></KlipFlowShell>; }
+function Router() { return <KlipFlowShell><Switch><Route path="/" component={Home} /><Route path="/dashboard" component={Dashboard} /><Route path="/new-project" component={NewProject} /><Route path="/project/:id" component={ProjectDetail} /><Route path="/clips" component={Clips} /><Route path="/earnings" component={Earnings} /><Route path="/accounts" component={Accounts} /><Route path="/settings" component={Settings} /><Route path="/how-to-use" component={HowToUse} /><Route path="/terms" component={Terms} /><Route path="/privacy" component={Privacy} /><Route path="/404" component={NotFound} /><Route component={NotFound} /></Switch><Onboarding /></KlipFlowShell>; }
 export default function App() { return <ErrorBoundary><ThemeProvider defaultTheme="light" switchable><TooltipProvider><Toaster /><Router /></TooltipProvider></ThemeProvider></ErrorBoundary>; }

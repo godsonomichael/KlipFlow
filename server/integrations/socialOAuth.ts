@@ -21,6 +21,10 @@ export function isInstagramOAuthConfigured() {
   return Boolean(appId && appSecret && !appSecret.startsWith("temp_"));
 }
 
+export function isTikTokOAuthConfigured() {
+  return Boolean((env("TIKTOK_CLIENT_KEY") || env("TIKTOK_CLIENT_ID")) && env("TIKTOK_CLIENT_SECRET"));
+}
+
 function publicBaseUrl(req: Request) {
   const configured = env("PUBLIC_APP_URL") || env("APP_PUBLIC_URL") || env("VITE_APP_URL");
   if (configured) return configured.replace(/\/$/, "");

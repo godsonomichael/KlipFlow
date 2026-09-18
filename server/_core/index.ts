@@ -39,6 +39,9 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  const tiktokVerification = "tiktok-developers-site-verification=34VdnAV146w4z9QIBGC9XBO2JEIn09zf";
+  app.get("/tiktok34VdnAV146w4z9QIBGC9XBO2JEIn09zf", (_req, res) => res.type("text/plain").send(tiktokVerification));
+  app.get("/tiktok34VdnAV146w4z9QIBGC9XBO2JEIn09zf.txt", (_req, res) => res.type("text/plain").send(tiktokVerification));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerSocialOAuthRoutes(app);
