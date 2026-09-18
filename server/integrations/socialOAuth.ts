@@ -14,6 +14,12 @@ function env(name: string) {
   return process.env[name]?.trim() || "";
 }
 
+export function isInstagramOAuthConfigured() {
+  const appId = env("INSTAGRAM_APP_ID") || env("META_APP_ID");
+  const appSecret = env("INSTAGRAM_APP_SECRET") || env("META_APP_SECRET");
+  return Boolean(appId && appSecret && !appSecret.startsWith("temp_"));
+}
+
 function publicBaseUrl(req: Request) {
   const configured = env("PUBLIC_APP_URL") || env("APP_PUBLIC_URL") || env("VITE_APP_URL");
   if (configured) return configured.replace(/\/$/, "");
@@ -97,6 +103,11 @@ export function registerSocialOAuthRoutes(app: Express) {
   app.get("/api/oauth/instagram/start", async (req, res) => {
     try {
       await requireUser(req);
+      const configuredSecret = env("INSTAGRAM_APP_SECRET") || env("META_APP_SECRET");
+      if (configuredSecret.startsWith("temp_")) {
+        res.redirect(302, "/accounts?oauth=instagram-manual&message=Coming%20soon%20-%20manual%20upload%20fallback");
+        return;
+      }
       const appId = env("INSTAGRAM_APP_ID") || env("META_APP_ID");
       if (!appId) throw new Error("Instagram OAuth is not configured yet.");
       const state = randomBytes(24).toString("hex");
@@ -116,6 +127,7 @@ export function registerSocialOAuthRoutes(app: Express) {
       verifyState(req, res, INSTAGRAM_STATE_COOKIE, state);
       const appId = env("INSTAGRAM_APP_ID") || env("META_APP_ID");
       const appSecret = env("INSTAGRAM_APP_SECRET") || env("META_APP_SECRET");
+      if (appSecret.startsWith("temp_")) throw new Error("Coming soon - manual upload fallback");
       if (!code || !appId || !appSecret) throw new Error("Instagram OAuth callback is missing required configuration.");
       const tokenUrl = new URL(`https://graph.facebook.com/${graphVersion}/oauth/access_token`);
       tokenUrl.search = new URLSearchParams({ client_id: appId, client_secret: appSecret, redirect_uri: `${publicBaseUrl(req)}/api/oauth/instagram/callback`, code }).toString();
