@@ -5,11 +5,21 @@ import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import { storageGetSignedUrl, storagePut } from "../storage";
 
 const MAX_SOURCE_BYTES = 750 * 1024 * 1024;
 const CLIP_COUNT = 5;
 const MIN_SOURCE_SECONDS = 8;
+const require = createRequire(import.meta.url);
+
+function bundledFfmpegBinary() {
+  return require("ffmpeg-static") as string | null;
+}
+
+function bundledFfprobeBinary() {
+  return require("ffprobe-static").path as string;
+}
 
 type ClipWindow = {
   index: number;
@@ -29,7 +39,11 @@ export type ProcessedClip = {
 };
 
 function ffmpegBinary() {
-  return process.env.FFMPEG_PATH || "ffmpeg";
+  return process.env.FFMPEG_PATH || bundledFfmpegBinary() || "ffmpeg";
+}
+
+function ffprobeBinary() {
+  return process.env.FFPROBE_PATH || bundledFfprobeBinary() || "ffprobe";
 }
 
 function publicAppUrl() {
@@ -115,7 +129,7 @@ function runFfmpeg(inputPath: string, outputPath: string, window: ClipWindow) {
 async function readDuration(inputPath: string) {
   return new Promise<number>((resolve, reject) => {
     const args = ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", inputPath];
-    const child = spawn("ffprobe", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(ffprobeBinary(), args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", chunk => { stdout += String(chunk); });
