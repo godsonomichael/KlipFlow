@@ -5,7 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { inspectDriveUrl, isDriveConfigured } from "./integrations/googleDrive";
-import { addConnectedAccount, countUnreadNotifications, createProject, generateClips, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, simulatePost, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
+import { addConnectedAccount, cancelGeneration, countUnreadNotifications, createProject, generateClips, generationHistory, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, simulatePost, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
 import { postClipToProvider, syncProviderViews } from "./integrations/socialProviders";
 
 const platform = z.enum(["tiktok", "instagram", "youtube", "x"]);
@@ -31,6 +31,9 @@ export const appRouter = router({
       get: protectedProcedure.input(z.object({ projectId: z.string().uuid() })).query(({ ctx, input }) => getProject(userId(ctx), input.projectId)),
       create: protectedProcedure.input(z.object({ sourceLink: z.string().url().optional(), fileUrl: z.string().optional(), requirementsLink: z.string().url().optional(), requirementsFile: z.string().optional(), title: z.string().max(120).optional() })).mutation(({ ctx, input }) => createProject(userId(ctx), input)),
       generate: protectedProcedure.input(z.object({ projectId: z.string().uuid() })).mutation(({ ctx, input }) => generateClips(userId(ctx), input.projectId)),
+      retry: protectedProcedure.input(z.object({ projectId: z.string().uuid() })).mutation(({ ctx, input }) => generateClips(userId(ctx), input.projectId)),
+      generationHistory: protectedProcedure.input(z.object({ projectId: z.string().uuid() })).query(({ ctx, input }) => generationHistory(userId(ctx), input.projectId)),
+      cancelGeneration: protectedProcedure.input(z.object({ projectId: z.string().uuid(), jobId: z.string().uuid().optional() })).mutation(({ ctx, input }) => cancelGeneration(userId(ctx), input.projectId, input.jobId)),
     }),
     clips: router({
       list: protectedProcedure.query(({ ctx }) => listClips(userId(ctx))),

@@ -87,15 +87,39 @@ export async function getProject(userId: string, projectId: string) {
   return rows[0];
 }
 
+export async function generationHistory(userId: string, projectId: string) {
+  await getProject(userId, projectId);
+  return query<any>("SELECT id,project_id,status,progress,current_step,error_message,cancel_requested,started_at,completed_at,created_at,updated_at FROM generation_jobs WHERE project_id=? AND user_id=? ORDER BY created_at DESC LIMIT 20", [projectId, userId]);
+}
+
+export async function cancelGeneration(userId: string, projectId: string, jobId?: string) {
+  await getProject(userId, projectId);
+  const rows = await query<any>("SELECT id,status FROM generation_jobs WHERE project_id=? AND user_id=? AND (? IS NULL OR id=?) ORDER BY created_at DESC LIMIT 1", [projectId, userId, jobId ?? null, jobId ?? null]);
+  const job = rows[0];
+  if (!job) workflowError("There is no generation job to cancel.", "NOT_FOUND");
+  if (!["queued", "running", "cancelling"].includes(job.status)) return { id: job.id, status: job.status };
+  await execute("UPDATE generation_jobs SET cancel_requested=TRUE,status='cancelling',current_step='Cancellation requested' WHERE id=? AND user_id=?", [job.id, userId]);
+  return { id: job.id, status: "cancelling" } as const;
+}
+
+async function updateGenerationJob(jobId: string, values: { status?: string; progress?: number; currentStep?: string; errorMessage?: string | null; startedAt?: Date | null; completedAt?: Date | null }) {
+  await execute("UPDATE generation_jobs SET status=COALESCE(?,status),progress=COALESCE(?,progress),current_step=COALESCE(?,current_step),error_message=?,started_at=COALESCE(?,started_at),completed_at=? WHERE id=?", [values.status ?? null, values.progress ?? null, values.currentStep ?? null, values.errorMessage ?? null, values.startedAt ?? null, values.completedAt ?? null, jobId]);
+}
+
 export async function generateClips(userId: string, projectId: string) {
   const rows = await query<any>("SELECT id,source_link,file_url FROM projects WHERE id=? AND user_id=? LIMIT 1", [projectId, userId]);
   const project = rows[0];
   if (!project) workflowError("That project was not found.", "NOT_FOUND");
   const sourceVideo = project.file_url ?? project.source_link ?? null;
   if (!sourceVideo) workflowError("Add a video file or a direct video URL before generating clips.", "BAD_GATEWAY");
+  const active = await query("SELECT id FROM generation_jobs WHERE project_id=? AND user_id=? AND status IN ('queued','running','cancelling') LIMIT 1", [projectId, userId]);
+  if (active[0]) workflowError("This project is already generating clips. You can monitor it below.", "PRECONDITION_FAILED");
+  const jobId = randomUUID();
+  await execute("INSERT INTO generation_jobs (id,project_id,user_id,status,progress,current_step,started_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)", [jobId, projectId, userId, "queued", 0, "Waiting to start"]);
   await execute("UPDATE projects SET status='processing', processing_error=NULL, processed_at=NULL WHERE id=? AND user_id=?", [projectId, userId]);
   try {
-    const result = await processVideoIntoClips({ userId, projectId, source: sourceVideo, upload: async (key, body, contentType) => storagePut(key, body, contentType) });
+    await updateGenerationJob(jobId, { status: "running", progress: 1, currentStep: "Starting video processing", startedAt: new Date() });
+    const result = await processVideoIntoClips({ userId, projectId, source: sourceVideo, jobId, upload: async (key, body, contentType) => storagePut(key, body, contentType), onProgress: (progress, currentStep) => updateGenerationJob(jobId, { progress, currentStep }), shouldCancel: async () => Boolean((await query<any>("SELECT cancel_requested FROM generation_jobs WHERE id=? LIMIT 1", [jobId]))[0]?.cancel_requested) });
     const clipRows = [];
     for (const clip of result.clips) {
       const id = randomUUID();
@@ -103,12 +127,16 @@ export async function generateClips(userId: string, projectId: string) {
       clipRows.push({ id, project_id: projectId, title: clip.title, caption: clip.caption, clip_url: clip.clipUrl, status: "ready", start_seconds: clip.startSeconds, end_seconds: clip.endSeconds, duration_seconds: clip.durationSeconds, processing_job_id: clip.processingJobId, created_at: new Date() });
     }
     await execute("UPDATE projects SET status='ready', processed_at=CURRENT_TIMESTAMP, processing_error=NULL WHERE id=? AND user_id=?", [projectId, userId]);
+    await updateGenerationJob(jobId, { status: "completed", progress: 100, currentStep: "Generation complete", completedAt: new Date() });
     await createNotification(userId, "clip_ready", "Your clips are ready", `${clipRows.length} clips are ready to review.`, "/clips");
     return clipRows;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Video processing failed.";
-    await execute("UPDATE projects SET status='failed', processing_error=? WHERE id=? AND user_id=?", [message, projectId, userId]);
-    throw new TRPCError({ code: "BAD_GATEWAY", message });
+    const cancelled = message === "GENERATION_CANCELLED";
+    const displayMessage = cancelled ? "Generation cancelled." : message;
+    await execute("UPDATE projects SET status=?, processing_error=? WHERE id=? AND user_id=?", [cancelled ? "cancelled" : "failed", displayMessage, projectId, userId]);
+    await updateGenerationJob(jobId, { status: cancelled ? "cancelled" : "failed", currentStep: displayMessage, errorMessage: displayMessage, completedAt: new Date() });
+    throw new TRPCError({ code: cancelled ? "CONFLICT" : "BAD_GATEWAY", message: displayMessage });
   }
 }
 

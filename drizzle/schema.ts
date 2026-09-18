@@ -27,6 +27,21 @@ export const projects = mysqlTable("projects", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 }, table => ({ userCreated: index("projects_user_created_idx").on(table.userId, table.createdAt) }));
 
+export const generationJobs = mysqlTable("generation_jobs", {
+  id: char("id", { length: 36 }).primaryKey(),
+  projectId: char("project_id", { length: 36 }).notNull(),
+  userId: varchar("user_id", { length: 64 }).notNull(),
+  status: varchar("status", { length: 32 }).default("queued").notNull(),
+  progress: int("progress").default(0).notNull(),
+  currentStep: varchar("current_step", { length: 160 }),
+  errorMessage: text("error_message"),
+  cancelRequested: boolean("cancel_requested").default(false).notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, table => ({ projectCreated: index("generation_jobs_project_created_idx").on(table.projectId, table.createdAt) }));
+
 export const generatedClips = mysqlTable("generated_clips", {
   id: char("id", { length: 36 }).primaryKey(),
   projectId: char("project_id", { length: 36 }).notNull(),

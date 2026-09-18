@@ -146,18 +146,26 @@ export async function processVideoIntoClips(options: {
   projectId: string;
   source: string;
   upload: (key: string, body: Buffer, contentType: string) => Promise<{ url: string }>;
+  jobId?: string;
+  onProgress?: (progress: number, currentStep: string) => Promise<void> | void;
+  shouldCancel?: () => Promise<boolean> | boolean;
 }) {
-  const jobId = randomUUID();
+  const jobId = options.jobId ?? randomUUID();
   const directory = await mkdtemp(join(tmpdir(), `klipflow-${jobId}-`));
   try {
+    await options.onProgress?.(5, "Downloading source video");
     const inputPath = await downloadSource(options.source, directory);
+    await options.onProgress?.(15, "Reading source duration");
     const duration = await readDuration(inputPath);
     const windows = makeWindows(duration);
     const clips: ProcessedClip[] = [];
     for (const window of windows) {
+      if (await options.shouldCancel?.()) throw new Error("GENERATION_CANCELLED");
+      await options.onProgress?.(20 + window.index * 16, `Rendering clip ${window.index + 1} of ${windows.length}`);
       const outputPath = join(directory, `clip-${window.index + 1}.mp4`);
       await runFfmpeg(inputPath, outputPath, window);
       const buffer = await readFile(outputPath);
+      await options.onProgress?.(28 + window.index * 16, `Uploading clip ${window.index + 1} of ${windows.length}`);
       const stored = await options.upload(`klipflow/${options.userId}/clips/${options.projectId}/${jobId}-${window.index + 1}.mp4`, buffer, "video/mp4");
       const clipUrl = publicAppUrl() ? `${publicAppUrl().replace(/\/$/, "")}${stored.url}` : stored.url;
       clips.push({
@@ -170,6 +178,7 @@ export async function processVideoIntoClips(options: {
         processingJobId: jobId,
       });
     }
+    await options.onProgress?.(100, "Generation complete");
     return { jobId, sourceDurationSeconds: Number(duration.toFixed(2)), clips };
   } finally {
     await rm(directory, { recursive: true, force: true });
