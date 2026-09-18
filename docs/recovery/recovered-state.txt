@@ -1,0 +1,35 @@
+KlipFlow recovered external state — 2026-09-16
+
+Drive handoff:
+- Pasted_content_02.txt: API-key-first automation is possible for campaign checking, filtering, storage, Telegram alerts, requirements extraction, content assistance, and approved Metricool scheduling; OAuth may be required for full worker-visible campaign access.
+- KlipFlow Migration Memory: historical app name Clipper OS, requested rename to ClipFlow, final user direction is KlipFlow; legacy Supabase table clipper_os_campaigns; intended Next.js/Whop/PWA architecture; n8n and Metricool integrations.
+- Logo assets: KlipFlow img 1 (orange KF), KlipFlow Img 2 (white KF); orange asset uploaded to WebDev storage as /manus-storage/klipflow-orange-kf_0444aca3.webp.
+
+Whop:
+- Original business account: Clipper OS, biz_LqD2mgvx3xKUX9.
+- Product: Content Rewards Automation, prod_YRjYtgcTco7wH.
+- Related products: Campaign Discovery Automation; Worker Campaign OAuth (three products).
+- No owned app record discoverable via current Whop apps connector.
+- Read-only visible bounties include current open post-engagement campaigns; no KlipFlow app listing found.
+
+n8n:
+- Workspace: https://yediworkspace.app.n8n.cloud
+- Active: ClipFlow Telegram Alerts, workflow PaphPKcfamhOy7iP; production webhook /webhook/clipflow-telegram-alert.
+- Active: Telegram Campaign Alert Connection, workflow zABwIimo8C8isJ3N.
+- Inactive: Campaign Intake and Review Queue, workflow gDXdzWc1i6687Oxd; production webhook /webhook/campaign-intake; requires X-Campaign-Webhook-Secret.
+- Inactive: Whop Credential Read-Only Test, workflow GDZAyV9FIlj30S9q.
+- Data table: Campaign Intake, fZUpafzIPRWb3UIS, project ZOcVU6MfGwMMJXjx; 2 test rows only.
+- Credentials metadata: Worker Campaign OAuth; Header Auth account; Header Auth account 2; Telegram account. Secret values not exposed.
+- Failure 1: OAuth token exchange invalid_client because client_secret was missing.
+- Failure 2: API-key identity test unauthorized for company:balance:read.
+
+Metricool:
+- Existing brand horror_cooked_edits, brandId 6945561, timezone Africa/Lagos.
+- Scheduled queue currently empty.
+
+Supabase:
+- Accessible projects: olybogkdlygghegvsmkc (godsonomichael's Project, inactive) and zvtvdqkmsqffiwjbglri (VerifyAI, inactive); table inspection timed out for both.
+
+WebDev:
+- New project created at /home/ubuntu/klipflow; preview https://3000-i5kj9fr90a5j6sobgt111-cfe16c2b.us1.manus.computer.
+- Current product shell: /, /bounties, /flows, /drops; dark #0A0A0A/#171717/#FF4D00 brand; typed shared contracts; tests pass.

@@ -1,0 +1,42 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [
+    "server",
+    "db",
+    "user"
+  ],
+  "dev_command": "pnpm run dev",
+  "env_vars": {
+    "DATABASE_URL": "mysql://2bRyX5Qorhy4Ww6.root:FDZLDSZ3u28kK04wKA2j@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/g6pMN7FApnJhzqQERtdnRz?ssl={\"rejectUnauthorized\":true}"
+  },
+  "experiments": [
+    "no_db_push"
+  ],
+  "git_remote": {
+    "repo_url": "https://7f0548f6b28a1758d9bf7be630d36cb4.artifacts.cloudflare.net/git/prod/g6pMN7FApnJhzqQERtdnRz.git",
+    "expiration": "2026-09-19T07:38:00.353Z",
+    "token": "art_v2_x_dbacd8da22476c27d9c7a319159779693c165787?expires=1789803480",
+    "backend": "GIT_BACKEND_ARTIFACTS"
+  },
+  "name": "klipflow-manus",
+  "path": "/home/ubuntu/klipflow-manus",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "b5TfMRwEWihX326pGgbneh",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "5HR8Je9a6fTzYbtq7SaesE",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "VerifyAILabs",
+    "OWNER_OPEN_ID": "ZE9X2moH2jbJb8nU7rJL9Q",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "c2ff4a43-38f7-486c-b7f3-63808457edc3",
+    "VITE_APP_ID": "g6pMN7FApnJhzqQERtdnRz",
+    "VITE_APP_LOGO": "",
+    "VITE_APP_TITLE": "KlipFlow",
+    "VITE_FRONTEND_FORGE_API_KEY": "QRWqcwkJ6rA4HWiLpYgDKs",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-db-user",
+  "test_command": "pnpm test"
+}

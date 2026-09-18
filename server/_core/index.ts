@@ -7,6 +7,10 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { registerWorkflowUploadRoutes } from "../integrations/workflowUpload";
+import { handleTelegramReminders } from "../integrations/telegramReminders";
+import { registerSocialOAuthRoutes } from "../integrations/socialOAuth";
+import { handleProviderViewSync } from "../integrations/viewSync";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -36,6 +40,10 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  registerSocialOAuthRoutes(app);
+  registerWorkflowUploadRoutes(app);
+  app.post("/api/scheduled/telegram-reminders", handleTelegramReminders);
+  app.post("/api/scheduled/provider-view-sync", handleProviderViewSync);
   // tRPC API
   app.use(
     "/api/trpc",

@@ -1,33 +1,8 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { FileVideo, FolderOpen, Plus } from "lucide-react";
+import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  const projects = trpc.klipflow.projects.list.useQuery();
+  return <div className="space-y-6"><section className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#FF4D00]">Your workspace</p><h1 className="mt-1 text-3xl font-black tracking-tight">My Clipping Projects</h1><p className="mt-2 text-base leading-6 text-black/55">Keep your videos, clips, and posts in one place.</p></div><Link href="/new-project"><button className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#FF4D00] px-4 text-sm font-extrabold text-white"><Plus size={18} /> New Project</button></Link></section>{projects.isLoading && <div className="rounded-3xl bg-white p-8 text-center text-sm text-black/45">Loading your projects…</div>}{projects.error && <div className="rounded-3xl bg-white p-6 text-sm text-black/50">Your projects are not available yet. Try again soon.</div>}{!projects.isLoading && !projects.error && projects.data?.length === 0 && <div className="rounded-3xl bg-white p-8 text-center"><FolderOpen className="mx-auto text-[#FF4D00]" size={32} /><h2 className="mt-3 text-lg font-black">No projects yet</h2><p className="mt-1 text-sm text-black/45">Add a video to create your first clips.</p><Link href="/new-project"><button className="mt-5 h-12 w-full rounded-2xl bg-[#FF4D00] text-sm font-extrabold text-white">Add a video to clip</button></Link></div>}<div className="grid gap-4 sm:grid-cols-2">{(projects.data ?? []).map((project) => { const count = Array.isArray(project.generated_clips) ? project.generated_clips[0]?.count ?? 0 : 0; return <article key={project.id} className="overflow-hidden rounded-3xl bg-white shadow-sm"><div className="flex aspect-video items-center justify-center bg-[#252525] text-white/50">{project.file_url ? <video src={project.file_url} className="h-full w-full object-cover" muted /> : <FileVideo size={34} />}</div><div className="p-4"><h2 className="truncate font-extrabold">{project.title}</h2><div className="mt-2 flex items-center justify-between text-sm text-black/50"><span>{count} clips generated</span><span className="rounded-full bg-[#F7F7F5] px-3 py-1 text-xs font-bold">{project.status}</span></div></div></article>; })}</div></div>;
 }
