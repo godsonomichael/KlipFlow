@@ -1,0 +1,6 @@
+import { Check, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+export default function Admin() {
+  return <div className="space-y-6"><div><p className="text-sm font-semibold text-[#FF4D00]">For you</p><h1 className="mt-1 text-3xl font-black">Review clips</h1><p className="mt-2 text-sm text-black/50">Check clips, set the rate, and approve good work.</p></div><section className="rounded-3xl bg-white p-5"><label className="text-sm font-bold">Pay per 1,000 views</label><Input placeholder="$5.00" className="mt-2 h-12 rounded-2xl border-black/10 bg-[#F7F7F5]" /><button className="mt-3 h-11 w-full rounded-2xl bg-[#FF4D00] text-sm font-extrabold text-white">Save rate</button></section><section className="rounded-3xl bg-white p-8 text-center"><h2 className="font-black">No clips to review</h2><p className="mt-1 text-sm text-black/45">New submissions will show up here.</p><div className="mt-5 flex justify-center gap-2"><button className="flex h-10 items-center gap-2 rounded-2xl border border-black/10 px-4 text-sm font-bold text-black/40"><X size={16} /> Reject</button><button className="flex h-10 items-center gap-2 rounded-2xl bg-[#FF4D00] px-4 text-sm font-bold text-white"><Check size={16} /> Approve</button></div></section></div>;
+}

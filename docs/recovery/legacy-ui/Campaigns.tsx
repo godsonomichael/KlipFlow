@@ -1,0 +1,7 @@
+import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
+
+export default function Campaigns() {
+  const campaigns = trpc.klipflow.bounties.useQuery();
+  return <div className="space-y-5"><div><p className="text-sm font-semibold text-[#FF4D00]">Choose a video</p><h1 className="mt-1 text-3xl font-black">Campaigns</h1><p className="mt-2 text-sm text-black/50">Make a clip for a creator and earn when people watch it.</p></div>{!campaigns.isLoading && !campaigns.error && campaigns.data?.length === 0 && <div className="rounded-3xl bg-white p-8 text-center"><h2 className="text-lg font-bold">No campaigns yet. Check back soon!</h2><Link href="/"><button className="mt-4 h-11 rounded-2xl bg-[#FF4D00] px-5 text-sm font-extrabold text-white">Go home</button></Link></div>}{campaigns.error && <div className="rounded-3xl bg-white p-6 text-sm text-black/55">Campaigns are not available right now.</div>}{(campaigns.data ?? []).map((campaign) => <Link key={campaign.id} href={`/campaign/${campaign.id}`}><article className="flex gap-4 rounded-3xl bg-white p-4 shadow-sm"><div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-[#252525] text-xs text-white/50">{campaign.exampleVideoUrl ? "Watch" : "Video soon"}</div><div className="min-w-0 flex-1"><h2 className="font-extrabold">{campaign.title}</h2><p className="mt-1 text-sm text-black/45">{campaign.platform}</p><p className="mt-3 font-black text-[#FF4D00]">{campaign.ratePerThousand ?? campaign.reward} per 1,000 views</p></div></article></Link>)}</div>;
+}
