@@ -212,5 +212,52 @@ export async function countUnreadNotifications(userId: string) { const rows = aw
 export async function markNotificationRead(userId: string, notificationId: string) { await execute("UPDATE klipflow_notifications SET is_read=TRUE WHERE id=? AND user_id=?", [notificationId, userId]); return { success: true } as const; }
 
 export function getDueReminderMinutes(postedAt: string, now = new Date()) { const elapsedMinutes = (now.getTime() - new Date(postedAt).getTime()) / 60000; return [10, 25].filter(minute => elapsedMinutes >= minute && elapsedMinutes < 30); }
-export async function processDueTelegramReminders() { return { sent: 0, skipped: 0, candidates: 0 }; }
-export async function processProviderViewSync() { return { synced: 0, failed: 0, candidates: 0 }; }
+
+async function sendTelegramMessage(chatId: string, text: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: false }) });
+    return response.ok;
+  } catch { return false; }
+}
+
+export async function processDueTelegramReminders(now = new Date()) {
+  const lower = new Date(now.getTime() - 30 * 60_000);
+  const candidates = await query<any>("SELECT s.id,s.user_id,s.post_url,s.platform,s.posted_at,c.title,p.requirements_link FROM submissions s JOIN generated_clips c ON c.id=s.clip_id JOIN projects p ON p.id=c.project_id WHERE s.posted_at IS NOT NULL AND s.posted_at>=? AND s.whop_submission_status NOT IN ('submitted','approved') LIMIT 500", [lower]);
+  let sent = 0;
+  let skipped = 0;
+  for (const row of candidates) {
+    for (const reminderMinute of getDueReminderMinutes(String(row.posted_at), now)) {
+      const existing = await query("SELECT id FROM klipflow_reminder_deliveries WHERE submission_id=? AND reminder_minute=? AND channel='telegram' LIMIT 1", [row.id, reminderMinute]);
+      if (existing[0]) continue;
+      const deliveryId = randomUUID();
+      await execute("INSERT INTO klipflow_reminder_deliveries (id,submission_id,reminder_minute,channel) VALUES (?,?,?,'telegram')", [deliveryId, row.id, reminderMinute]);
+      const settings = await query<any>("SELECT telegram_chat_id,telegram_enabled FROM clipper_settings WHERE user_id=? LIMIT 1", [row.user_id]);
+      const connected = await query<any>("SELECT handle,status FROM connected_accounts WHERE user_id=? AND platform='telegram' ORDER BY created_at DESC LIMIT 1", [row.user_id]);
+      const chatId = settings[0]?.telegram_chat_id && settings[0]?.telegram_enabled !== false ? String(settings[0].telegram_chat_id) : connected[0]?.handle && connected[0]?.status !== "disconnected" ? String(connected[0].handle) : null;
+      if (!chatId) { await execute("DELETE FROM klipflow_reminder_deliveries WHERE id=?", [deliveryId]); skipped += 1; continue; }
+      const publicUrl = process.env.PUBLIC_APP_URL || process.env.APP_PUBLIC_URL || process.env.VITE_APP_URL || "";
+      const campaign = row.requirements_link ? `\\nWhop campaign: ${row.requirements_link}` : "";
+      const clipsUrl = publicUrl ? `${publicUrl.replace(/\/$/, "")}/clips` : "Open KlipFlow → My Clips";
+      const text = reminderMinute === 10
+        ? `KlipFlow reminder: ${row.title || "Your clip"} was posted to ${row.platform || "social media"}. You have about 20 minutes left to submit it to Whop.\\nPost: ${row.post_url || "Open My Clips"}${campaign}\\n${clipsUrl}`
+        : `KlipFlow urgent reminder: ${row.title || "Your clip"} was posted to ${row.platform || "social media"}. You have about 5 minutes left to submit it to Whop.\\nPost: ${row.post_url || "Open My Clips"}${campaign}\\n${clipsUrl}`;
+      if (await sendTelegramMessage(chatId, text)) { await createNotification(row.user_id, "submission_reminder", reminderMinute === 10 ? "20 minutes left to submit" : "5 minutes left to submit", text, "/clips"); sent += 1; }
+      else { await execute("DELETE FROM klipflow_reminder_deliveries WHERE id=?", [deliveryId]); skipped += 1; }
+    }
+  }
+  return { sent, skipped, candidates: candidates.length };
+}
+
+export async function processProviderViewSync() {
+  const candidates = await query<any>("SELECT id,user_id,platform FROM submissions WHERE platform IN ('youtube','instagram') AND provider_post_id IS NOT NULL LIMIT 500");
+  const { syncProviderViews } = await import("./socialProviders");
+  let synced = 0;
+  let failed = 0;
+  for (const row of candidates) {
+    try { const result = await syncProviderViews(row.user_id, row.id, row.platform); if (result?.view_sync_error) failed += 1; else synced += 1; }
+    catch { failed += 1; }
+  }
+  return { synced, failed, candidates: candidates.length };
+}
