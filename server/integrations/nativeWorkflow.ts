@@ -168,23 +168,34 @@ export async function getSubmissionForProvider(userId: string, submissionId: str
 
 export async function submitClip(userId: string, clipId: string, postUrl: string, platform?: string, providerPostId?: string) {
   const clip = await getClipForProvider(userId, clipId);
+  const normalizedUrl = validatePostUrl(postUrl, platform);
+  const existing = await query<any>("SELECT id,clip_id,post_url,views,status,earnings,platform,provider_post_id,whop_submission_status,posted_at FROM submissions WHERE user_id=? AND clip_id=? AND post_url=? LIMIT 1", [userId, clip.id, normalizedUrl]);
+  if (existing[0]) return existing[0];
   const id = randomUUID();
-  await execute("INSERT INTO submissions (id,user_id,clip_id,post_url,platform,provider_post_id,provider_status,posted_at,status,whop_submission_status) VALUES (?,?,?,?,?,?,?,?,?,?)", [id, userId, clip.id, postUrl, platform ?? null, providerPostId ?? null, providerPostId ? "published" : null, new Date(), "pending", "not_submitted"]);
-  return { id, clip_id: clipId, post_url: postUrl, views: 0, status: "pending", earnings: 0, platform: platform ?? null, provider_post_id: providerPostId ?? null, whop_submission_status: "not_submitted", posted_at: new Date() };
+  const postedAt = new Date();
+  await execute("INSERT INTO submissions (id,user_id,clip_id,post_url,platform,provider_post_id,provider_status,posted_at,status,whop_submission_status) VALUES (?,?,?,?,?,?,?,?,?,?)", [id, userId, clip.id, normalizedUrl, platform ?? null, providerPostId ?? null, providerPostId ? "published" : null, postedAt, "pending", "not_submitted"]);
+  return { id, clip_id: clipId, post_url: normalizedUrl, views: 0, status: "pending", earnings: 0, platform: platform ?? null, provider_post_id: providerPostId ?? null, whop_submission_status: "not_submitted", posted_at: postedAt };
+}
+
+const platformHosts: Record<string, RegExp> = {
+  tiktok: /(^|\.)tiktok\.com$/i,
+  instagram: /(^|\.)instagram\.com$/i,
+  youtube: /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i,
+  x: /(^|\.)x\.com$|(^|\.)twitter\.com$/i,
+};
+
+export function validatePostUrl(postUrl: string, platform?: string) {
+  let parsed: URL;
+  try { parsed = new URL(postUrl); } catch { workflowError("Enter a valid public post URL.", "BAD_GATEWAY"); }
+  if (!parsed! || !["https:", "http:"].includes(parsed.protocol) || !parsed.hostname) workflowError("Enter a valid public post URL.", "BAD_GATEWAY");
+  if (platform && platformHosts[platform] && !platformHosts[platform].test(parsed!.hostname)) workflowError(`This URL does not belong to ${platform}.`, "BAD_GATEWAY");
+  return parsed!.toString();
 }
 
 export async function updateClipMetadata(userId: string, clipId: string, title: string, caption: string) {
   const clip = await getClipForProvider(userId, clipId);
   await execute("UPDATE generated_clips c JOIN projects p ON p.id=c.project_id SET c.title=?, c.caption=? WHERE c.id=? AND p.user_id=?", [title, caption, clipId, userId]);
   return { ...clip, title, caption };
-}
-
-export async function simulatePost(userId: string, clipId: string, platform: string, handle: string) {
-  const clean = handle.replace(/^@/, "").replace(/[^a-zA-Z0-9_.-]/g, "") || "clipper";
-  const postUrl = `${platform === "instagram" ? "https://instagram.com/reel" : platform === "youtube" ? "https://youtube.com/shorts" : platform === "x" ? "https://x.com" : `https://tiktok.com/@${clean}/video`}/${Date.now()}`;
-  const result = await submitClip(userId, clipId, postUrl, platform);
-  await notifyClipPosted(userId, clipId, platform);
-  return result;
 }
 
 export async function notifyClipPosted(userId: string, clipId: string, platform: string) {
