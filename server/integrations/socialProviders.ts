@@ -213,3 +213,15 @@ export async function checkConnectedAccountsHealth(userId: string) {
     }
   }));
 }
+
+export async function testTikTokConnection(userId: string) {
+  const account = await getOAuthAccount(userId, "tiktok");
+  if (!account) throw new Error("Connect TikTok with OAuth before testing the connection.");
+  const accessToken = await tiktokAccessToken(userId, account);
+  const profile = await jsonRequest("TikTok", "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url", { headers: { Authorization: `Bearer ${accessToken}` } });
+  const openId = String(profile.data?.user?.open_id || account.provider_user_id || "");
+  const displayName = String(profile.data?.user?.display_name || account.handle || "TikTok creator");
+  if (!openId) throw new Error("TikTok returned no creator profile.");
+  if (displayName !== account.handle) await saveOAuthAccount(userId, "tiktok", { handle: displayName, accessToken, refreshToken: account.refresh_token, expiresAt: account.token_expires_at, providerUserId: openId, providerMetadata: account.provider_metadata });
+  return { platform: "tiktok" as const, status: "healthy" as const, profileName: displayName, handle: displayName, avatarUrl: String(profile.data?.user?.avatar_url || ""), checkedAt: new Date().toISOString() };
+}
