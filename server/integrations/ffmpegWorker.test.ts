@@ -3,12 +3,15 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
+import { createRequire } from "node:module";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
 import { describe, expect, it } from "vitest";
 import { __private__, processVideoIntoClips } from "./ffmpegWorker";
 
 const execFileAsync = promisify(execFile);
+const require = createRequire(import.meta.url);
+const bundledFfmpeg = require("ffmpeg-static") as string;
 
 describe("FFmpeg clip worker", () => {
   it("creates five evenly distributed short-form windows", () => {
@@ -27,7 +30,7 @@ describe("FFmpeg clip worker", () => {
       createReadStream(sourcePath).pipe(res);
     });
     try {
-      await execFileAsync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=24", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", "8", "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", sourcePath]);
+      await execFileAsync(bundledFfmpeg, ["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=24", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", "8", "-c:v", "libx264", "-c:a", "aac", "-pix_fmt", "yuv420p", sourcePath]);
       await new Promise<void>(resolve => server.listen(0, "127.0.0.1", () => resolve()));
       const address = server.address();
       if (!address || typeof address === "string") throw new Error("Test server did not start");
