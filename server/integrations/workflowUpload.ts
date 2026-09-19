@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import multer from "multer";
+import { randomUUID } from "node:crypto";
 import { createContext } from "../_core/context";
 import { storagePut } from "../storage";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 250 * 1024 * 1024, files: 2 },
+  limits: { fileSize: 750 * 1024 * 1024, files: 2 },
   fileFilter: (_req, file, callback) => {
     const allowed = file.fieldname === "video" ? ["video/mp4", "video/quicktime", "video/webm"] : ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain"];
     callback(null, allowed.includes(file.mimetype));
@@ -22,8 +23,14 @@ export function registerWorkflowUploadRoutes(app: Express) {
       const requirements = files?.requirements?.[0];
       if (!video && !requirements) return res.status(400).json({ message: "Choose a video or requirements file first." });
       const result: { fileUrl?: string; requirementsUrl?: string } = {};
-      if (video) result.fileUrl = (await storagePut(`klipflow/${context.user.openId}/videos/${video.originalname}`, video.buffer, video.mimetype)).url;
-      if (requirements) result.requirementsUrl = (await storagePut(`klipflow/${context.user.openId}/requirements/${requirements.originalname}`, requirements.buffer, requirements.mimetype)).url;
+      if (video) {
+        const extension = video.originalname.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ".mp4";
+        result.fileUrl = (await storagePut(`klipflow/${context.user.openId}/videos/${randomUUID()}${extension}`, video.buffer, video.mimetype)).url;
+      }
+      if (requirements) {
+        const extension = requirements.originalname.toLowerCase().match(/\.[a-z0-9]+$/)?.[0] ?? ".txt";
+        result.requirementsUrl = (await storagePut(`klipflow/${context.user.openId}/requirements/${randomUUID()}${extension}`, requirements.buffer, requirements.mimetype)).url;
+      }
       return res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed.";
