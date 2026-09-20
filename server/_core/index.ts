@@ -12,7 +12,7 @@ import { handleTelegramReminders } from "../integrations/telegramReminders";
 import { registerSocialOAuthRoutes } from "../integrations/socialOAuth";
 import { handleProviderViewSync } from "../integrations/viewSync";
 import { handleAccountHealth } from "../integrations/accountHealth";
-import { serveStatic, setupVite } from "./vite";
+import { serveStatic } from "./static";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -65,6 +65,7 @@ async function startServer() {
   const server = createServer(app);
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
     serveStatic(app);
