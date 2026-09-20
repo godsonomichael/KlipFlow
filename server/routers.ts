@@ -6,7 +6,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { inspectDriveUrl, isDriveConfigured } from "./integrations/googleDrive";
 import { addConnectedAccount, cancelGeneration, countUnreadNotifications, createProject, generateClips, generationHistory, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
-import { checkConnectedAccountsHealth, postClipToProvider, syncProviderViews } from "./integrations/socialProviders";
+import { checkConnectedAccountsHealth, postClipToProvider, syncProviderViews, testTikTokConnection } from "./integrations/socialProviders";
 import { isInstagramOAuthConfigured } from "./integrations/socialOAuth";
 
 const platform = z.enum(["tiktok", "instagram", "youtube", "x"]);
@@ -25,6 +25,7 @@ export const appRouter = router({
     accounts: router({
       list: protectedProcedure.query(({ ctx }) => listConnectedAccounts(userId(ctx))),
       health: protectedProcedure.query(({ ctx }) => checkConnectedAccountsHealth(userId(ctx))),
+      testTikTok: protectedProcedure.mutation(({ ctx }) => testTikTokConnection(userId(ctx))),
       connect: protectedProcedure.input(z.object({ platform: accountPlatform, handle: z.string().min(2).max(120) })).mutation(({ ctx, input }) => addConnectedAccount(userId(ctx), input.platform, input.handle)),
       remove: protectedProcedure.input(z.object({ id: z.string().uuid() })).mutation(({ ctx, input }) => removeConnectedAccount(userId(ctx), input.id)),
     }),
