@@ -175,7 +175,9 @@ Use `.env.example` in the repository as the non-secret template. Values must be 
 
 Core values include `DATABASE_URL`, `JWT_SECRET`, `OAUTH_SERVER_URL`, `VITE_APP_ID`, `OWNER_OPEN_ID`, and `PUBLIC_APP_URL`.
 
-Media values include `FFMPEG_PATH`, `FFPROBE_PATH`, `FFMPEG_PRESET`, and `FFMPEG_CRF`.
+Media values include `FFMPEG_PATH`, `FFPROBE_PATH`, `FFMPEG_PRESET`, and `FFMPEG_CRF`. `KLIPFLOW_MAX_SOURCE_MB` and `KLIPFLOW_MAX_UPLOAD_MB` are optional deployment limits; when unset, the application does not impose the former 750 MB ceiling, but the host’s available disk, memory, timeout, and object-storage limits still apply. Set explicit values for a multi-tenant production deployment rather than promising literally unlimited processing.
+
+`MEDIA_INGEST_WORKER_URL` and optional `MEDIA_INGEST_WORKER_TOKEN` configure the external worker contract for YouTube watch URLs. The worker must accept `POST /v1/ingest` with `{ "source": "https://..." }` and return `{ "mediaUrl": "https://..." }` or a Manus storage path. The application rejects YouTube watch URLs when this worker is not configured; it never treats a web page as a video file.
 
 Social values include `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, and `META_GRAPH_VERSION`.
 
