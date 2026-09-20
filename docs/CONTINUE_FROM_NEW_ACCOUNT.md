@@ -3,7 +3,7 @@
 **Updated:** 20 September 2026  
 **Repository:** `godsonomichael/KlipFlow`  
 **Working branch:** `fix/real-posting-integrity`  
-**Latest pushed commit:** `e3b8e53c8c7577dc10c1edcbf713872b2cae601e`
+**Latest pushed commit:** `3459fc1297c96d004d5adb75b82d7efcf16e9261`
 
 ## Executive summary
 
@@ -29,6 +29,16 @@ The Whop source was **not available** in GitHub or in the current sandbox. The p
 - Added production SSRF protection against localhost, loopback, link-local, private-network, carrier-grade NAT, and IPv6 private hosts.
 - Preserved signed Manus storage URLs.
 - Added regression tests for source-host safety and HTTP(S) validation.
+
+### Commit `3459fc1`
+
+- Changed authenticated uploads from in-memory buffering to disk-backed streaming uploads.
+- Replaced the hard-coded 750 MB source ceiling with optional `KLIPFLOW_MAX_SOURCE_MB` and `KLIPFLOW_MAX_UPLOAD_MB` deployment settings.
+- Added authenticated Google Drive media downloads for supported Drive/Docs file links.
+- Added a real external media-ingestion contract for YouTube watch URLs through `MEDIA_INGEST_WORKER_URL`.
+- Added source-ingestion regression tests and updated the upload UI copy.
+
+This does not mean processing is literally unlimited. The effective limit is now the configured deployment policy plus available temporary disk, object storage, memory, process timeouts, and worker capacity. A production deployment should set explicit limits and use an asynchronous worker for multi-gigabyte sources.
 
 ### Validation result
 
