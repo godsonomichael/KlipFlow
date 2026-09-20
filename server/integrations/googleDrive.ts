@@ -5,6 +5,10 @@ const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
 export function extractDriveId(url: string): string | null {
   const value = url.trim();
   if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    if (!/(^|\.)drive\.google\.com$|(^|\.)docs\.google\.com$/i.test(parsed.hostname)) return null;
+  } catch { return null; }
   const match = value.match(/\/d\/([a-zA-Z0-9_-]+)/) ?? value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   return match?.[1] ?? null;
 }
@@ -51,6 +55,17 @@ export async function inspectDriveUrl(url: string) {
   }
   const metadata = await getDriveFileMetadata(fileId);
   return { fileId, metadata, readyForProcessing: true };
+}
+
+export function getDriveDownloadRequest(url: string) {
+  const fileId = extractDriveId(url);
+  if (!fileId) return null;
+  const token = getDriveToken();
+  return {
+    fileId,
+    url: `${DRIVE_API}/${encodeURIComponent(fileId)}?alt=media`,
+    headers: { Authorization: `Bearer ${token}` },
+  };
 }
 
 export function isDriveConfigured() {

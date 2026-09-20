@@ -3,15 +3,27 @@ import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
+import { Transform } from "node:stream";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { storageGetSignedUrl, storagePut } from "../storage";
+import { getDriveDownloadRequest } from "./googleDrive";
+import { resolveMediaSource } from "./mediaIngest";
 
-const MAX_SOURCE_BYTES = 750 * 1024 * 1024;
 const CLIP_COUNT = 5;
 const MIN_SOURCE_SECONDS = 8;
 const require = createRequire(import.meta.url);
+
+function maxSourceBytes() {
+  const megabytes = Number(process.env.KLIPFLOW_MAX_SOURCE_MB || 0);
+  return Number.isFinite(megabytes) && megabytes > 0 ? Math.floor(megabytes * 1024 * 1024) : Number.POSITIVE_INFINITY;
+}
+
+function sourceLimitMessage() {
+  const megabytes = Number(process.env.KLIPFLOW_MAX_SOURCE_MB || 0);
+  return Number.isFinite(megabytes) && megabytes > 0 ? `Source video is larger than the configured ${megabytes} MB processing limit.` : "Source video exceeds the available processing storage capacity.";
+}
 
 function bundledFfmpegBinary() {
   return require("ffmpeg-static") as string | null;
@@ -56,30 +68,59 @@ function sourceStorageKey(url: string) {
   return null;
 }
 
+function isPrivateHostname(hostname: string) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  const ipv4 = host.split(".").map(Number);
+  if (ipv4.length === 4 && ipv4.every(part => Number.isInteger(part) && part >= 0 && part <= 255)) {
+    const [first, second] = ipv4;
+    return first === 0 || first === 10 || first === 127 || (first === 169 && second === 254) || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168) || (first === 100 && second >= 64 && second <= 127) || (first === 198 && (second === 18 || second === 19));
+  }
+  return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8") || host.startsWith("fe9") || host.startsWith("fea") || host.startsWith("feb");
+}
+
+export function isSafeRemoteSource(source: string) {
+  try {
+    const url = new URL(source);
+    return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname) && !isPrivateHostname(url.hostname);
+  } catch { return false; }
+}
+
 async function resolveSourceUrl(source: string) {
   const key = sourceStorageKey(source);
   if (key) return storageGetSignedUrl(key);
-  if (/^https?:\/\//i.test(source)) return source;
+  if (isSafeRemoteSource(source) || (process.env.NODE_ENV !== "production" && /^https?:\/\/127\.0\.0\.1(?::\d+)?(?:\/|$)/i.test(source))) return source;
+  if (/^https?:\/\//i.test(source)) throw new Error("The source video URL must point to a public HTTP(S) host.");
   throw new Error("The source video is not a supported URL.");
 }
 
 async function downloadSource(source: string, directory: string) {
-  const url = await resolveSourceUrl(source);
-  const response = await fetch(url, { redirect: "follow" });
+  const resolvedSource = await resolveMediaSource(source);
+  const driveRequest = getDriveDownloadRequest(resolvedSource);
+  const url = driveRequest?.url ?? await resolveSourceUrl(resolvedSource);
+  const response = await fetch(url, { headers: driveRequest?.headers, redirect: "follow" });
   if (!response.ok) throw new Error(`Source video download failed (${response.status}).`);
   const contentLength = Number(response.headers.get("content-length") || 0);
-  if (contentLength > MAX_SOURCE_BYTES) throw new Error("Source video is larger than the 750 MB processing limit.");
+  if (contentLength > maxSourceBytes()) throw new Error(sourceLimitMessage());
   const inputPath = join(directory, "source-video");
   if (!response.body) {
     const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength > MAX_SOURCE_BYTES) throw new Error("Source video is larger than the 750 MB processing limit.");
+    if (buffer.byteLength > maxSourceBytes()) throw new Error(sourceLimitMessage());
     await import("node:fs/promises").then(fs => fs.writeFile(inputPath, buffer));
   } else {
-    await pipeline(response.body as unknown as NodeJS.ReadableStream, createWriteStream(inputPath));
+    let received = 0;
+    const limiter = new Transform({
+      transform(chunk, _encoding, callback) {
+        received += chunk.length;
+        if (received > maxSourceBytes()) callback(new Error(sourceLimitMessage()));
+        else callback(null, chunk);
+      },
+    });
+    await pipeline(response.body as unknown as NodeJS.ReadableStream, limiter, createWriteStream(inputPath));
   }
   const fileInfo = await stat(inputPath);
   if (!fileInfo.size) throw new Error("The downloaded source video is empty.");
-  if (fileInfo.size > MAX_SOURCE_BYTES) throw new Error("Source video is larger than the 750 MB processing limit.");
+  if (fileInfo.size > maxSourceBytes()) throw new Error(sourceLimitMessage());
   return inputPath;
 }
 
@@ -199,4 +240,4 @@ export async function processVideoIntoClips(options: {
   }
 }
 
-export const __private__ = { makeWindows, sourceStorageKey };
+export const __private__ = { makeWindows, sourceStorageKey, isPrivateHostname, isSafeRemoteSource };

@@ -5,7 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { inspectDriveUrl, isDriveConfigured } from "./integrations/googleDrive";
-import { addConnectedAccount, cancelGeneration, countUnreadNotifications, createProject, generateClips, generationHistory, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, simulatePost, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
+import { addConnectedAccount, cancelGeneration, countUnreadNotifications, createProject, generateClips, generationHistory, getClipperSettings, getEarningsSummary, getProject, listClips, listConnectedAccounts, listNotifications, listProjects, markNotificationRead, markWhopSubmitted, removeConnectedAccount, saveClipperSettings, submitClip, updateClipMetadata, updateWhopStatus } from "./integrations/nativeWorkflow";
 import { checkConnectedAccountsHealth, postClipToProvider, syncProviderViews } from "./integrations/socialProviders";
 import { isInstagramOAuthConfigured } from "./integrations/socialOAuth";
 
@@ -40,7 +40,6 @@ export const appRouter = router({
     clips: router({
       list: protectedProcedure.query(({ ctx }) => listClips(userId(ctx))),
       submit: protectedProcedure.input(z.object({ clipId: z.string().uuid(), postUrl: z.string().url(), platform: platform.optional() })).mutation(({ ctx, input }) => submitClip(userId(ctx), input.clipId, input.postUrl, input.platform)),
-      autoPost: protectedProcedure.input(z.object({ clipId: z.string().uuid(), platform, handle: z.string().min(1).max(80) })).mutation(({ ctx, input }) => simulatePost(userId(ctx), input.clipId, input.platform, input.handle)),
       realPost: protectedProcedure.input(z.object({ clipId: z.string().uuid(), platform: z.enum(["youtube", "instagram", "tiktok"]) })).mutation(({ ctx, input }) => postClipToProvider(userId(ctx), input.clipId, input.platform)),
       syncViews: protectedProcedure.input(z.object({ submissionId: z.string().uuid(), platform: z.enum(["youtube", "instagram"]) })).mutation(({ ctx, input }) => syncProviderViews(userId(ctx), input.submissionId, input.platform)),
       updateMetadata: protectedProcedure.input(z.object({ clipId: z.string().uuid(), title: z.string().min(1).max(120), caption: z.string().max(1000) })).mutation(({ ctx, input }) => updateClipMetadata(userId(ctx), input.clipId, input.title, input.caption)),

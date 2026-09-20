@@ -24,7 +24,7 @@ KlipFlow is designed to help creators upload or link a long video, generate shor
 
 ## Media processing
 
-The repository includes FFmpeg-based clip-processing work and upload/storage flows. Some generation and publishing paths remain simulated or require production-service validation. Advanced capabilities such as large-scale 30-clip generation, face tracking, smart cropping, and fully automated caption styling should be treated as roadmap or validation items until confirmed in production.
+The repository includes FFmpeg-based clip-processing work and upload/storage flows. The current worker renders five clips and now rejects private-network sources, enforces the source-size limit while streaming, and does not create synthetic post URLs. Advanced capabilities such as large-scale generation, asynchronous external rendering, transcription, captions, tags, face tracking, smart cropping, campaign-aware validation, and fully automated campaign submission remain production roadmap items.
 
 ## Technology
 
@@ -48,6 +48,10 @@ The repository includes FFmpeg-based clip-processing work and upload/storage flo
 - Instagram integration: architecture and OAuth/provider groundwork present; Meta Business configuration and review required
 - Production media processing, posting, analytics synchronization, and reminders: validate per environment before describing them as fully operational
 
+## Continuing from another account
+
+Read [`docs/CONTINUE_FROM_NEW_ACCOUNT.md`](docs/CONTINUE_FROM_NEW_ACCOUNT.md) before changing the application. It records the exact current commits, validation results, architecture boundaries, environment-variable names, WebDev ownership limitations, Whop integration status, and the ordered remaining production work. The shorter [`KLIPFLOW_ENGINEER_HANDOVER.md`](KLIPFLOW_ENGINEER_HANDOVER.md) remains the broader migration and engineering reference.
+
 ## Configuration categories
 
 The deployment may require environment variables for:
@@ -67,7 +71,7 @@ Requirements: Node.js 22+ and pnpm 10+.
 
 ```bash
 pnpm install
-cp .env.example .env
+ cp .env.example .env
 pnpm check
 pnpm test
 pnpm build

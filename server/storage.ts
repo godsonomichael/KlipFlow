@@ -3,6 +3,8 @@
 // Downloads return /manus-storage/{key} paths served via 307 redirect.
 
 import { ENV } from "./_core/env";
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
 
 function getForgeConfig() {
   const forgeUrl = ENV.forgeApiUrl;
@@ -68,6 +70,29 @@ export async function storagePut(
     throw new Error(`Storage upload to S3 failed (${uploadResp.status})`);
   }
 
+  return { key, url: `/manus-storage/${key}` };
+}
+
+async function presignPut(relKey: string) {
+  const { forgeUrl, forgeKey } = getForgeConfig();
+  const key = appendHashSuffix(normalizeKey(relKey));
+  const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
+  presignUrl.searchParams.set("path", key);
+  const presignResp = await fetch(presignUrl, { headers: { Authorization: `Bearer ${forgeKey}` } });
+  if (!presignResp.ok) {
+    const msg = await presignResp.text().catch(() => presignResp.statusText);
+    throw new Error(`Storage presign failed (${presignResp.status}): ${msg}`);
+  }
+  const { url: s3Url } = (await presignResp.json()) as { url: string };
+  if (!s3Url) throw new Error("Forge returned empty presign URL");
+  return { key, s3Url };
+}
+
+export async function storagePutFile(relKey: string, filePath: string, contentType = "application/octet-stream", contentLength?: number) {
+  const { key, s3Url } = await presignPut(relKey);
+  const size = contentLength ?? (await stat(filePath)).size;
+  const uploadResp = await fetch(s3Url, { method: "PUT", headers: { "Content-Type": contentType, "Content-Length": String(size) }, body: createReadStream(filePath) as any, duplex: "half" } as RequestInit & { duplex: "half" });
+  if (!uploadResp.ok) throw new Error(`Storage upload to S3 failed (${uploadResp.status})`);
   return { key, url: `/manus-storage/${key}` };
 }
 

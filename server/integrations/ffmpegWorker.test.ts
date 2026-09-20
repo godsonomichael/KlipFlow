@@ -14,6 +14,19 @@ const require = createRequire(import.meta.url);
 const bundledFfmpeg = require("ffmpeg-static") as string;
 
 describe("FFmpeg clip worker", () => {
+  it("rejects private-network source URLs outside the test fixture", () => {
+    expect(__private__.isPrivateHostname("localhost")).toBe(true);
+    expect(__private__.isPrivateHostname("127.0.0.1")).toBe(true);
+    expect(__private__.isPrivateHostname("10.0.0.8")).toBe(true);
+    expect(__private__.isPrivateHostname("203.0.113.10")).toBe(false);
+  });
+
+  it("accepts only HTTP(S) remote source URLs", () => {
+    expect(__private__.isSafeRemoteSource("https://cdn.example.com/video.mp4")).toBe(true);
+    expect(__private__.isSafeRemoteSource("file:///tmp/video.mp4")).toBe(false);
+    expect(__private__.isSafeRemoteSource("not-a-url")).toBe(false);
+  });
+
   it("creates five evenly distributed short-form windows", () => {
     const windows = __private__.makeWindows(120);
     expect(windows).toHaveLength(5);

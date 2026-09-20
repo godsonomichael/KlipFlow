@@ -16,7 +16,6 @@ export default function ProjectDetail() {
   const generate = trpc.klipflow.projects.generate.useMutation({ onSettled: () => { history.refetch(); allClips.refetch(); project.refetch(); } });
   const retry = trpc.klipflow.projects.retry.useMutation({ onSettled: () => { history.refetch(); allClips.refetch(); project.refetch(); } });
   const cancel = trpc.klipflow.projects.cancelGeneration.useMutation({ onSuccess: () => { setNotice("Cancellation requested. The current FFmpeg step will stop safely."); history.refetch(); }, onError: (error) => setNotice(error.message) });
-  const post = trpc.klipflow.clips.autoPost.useMutation();
   const realPost = trpc.klipflow.clips.realPost.useMutation();
   const update = trpc.klipflow.clips.updateMetadata.useMutation();
   const [started, setStarted] = useState(false);
@@ -59,7 +58,7 @@ export default function ProjectDetail() {
       const onSuccess = () => { setPosting(null); setPosted(clipId); setToast(true); window.setTimeout(() => setToast(false), 7000); };
       const onError = (error: { message?: string }) => { setPosting(null); setNotice(error.message || "We could not post this clip. Please try again."); };
       if (platform === "youtube" || platform === "instagram" || platform === "tiktok") realPost.mutate({ clipId, platform }, { onSuccess, onError });
-      else post.mutate({ clipId, platform, handle: account.handle }, { onSuccess, onError });
+      else { setPosting(null); setNotice(`Automatic posting is not configured for ${platform}.`); }
     }, onError: () => { setPosting(null); setNotice("We could not save the clip text. Please try again."); } });
   };
 

@@ -55,7 +55,7 @@ Current user-facing workflows:
 3. New Project accepts a source link, optional requirements link, and file selection.
 4. The user chooses Auto-create 5 viral clips or Let me cut manually.
 5. Generated clips appear in My Clips.
-6. Each clip supports download, auto-post simulation, or manual post-link submission.
+6. Each clip supports download, real provider posting when configured, or manual post-link submission. Do not create synthetic post URLs or simulated success states.
 7. Admin review is available at `/admin`.
 
 ## Supabase tables already created
@@ -117,7 +117,7 @@ After upload or project creation, show a simple creator-friendly processing card
 - “Adding captions”
 - “Your clips are almost ready”
 
-This may be simulated for the first version, but the project status must be stored in Supabase and the UI must clearly distinguish simulated processing from completed real media.
+The UI may show measured progress stages, but the project status must be stored in the database and the UI must clearly distinguish queued, running, completed, failed, and cancelled processing. Do not present simulated processing as completed real media.
 
 Use short, friendly wording. Do not show API, queue, worker, or infrastructure terminology.
 
